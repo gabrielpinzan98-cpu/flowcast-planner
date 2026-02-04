@@ -516,8 +516,10 @@ def api_prompt_detail(pr_id):
 
 # ────────────────────────────── MAIN ────────────────────────────────
 
+# Sempre inicializa o banco (funciona tanto com gunicorn quanto direto)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 5000))
     print(f"\n  ⚡ FlowCast Planner rodando em http://localhost:{port}\n")
     app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG", "0") == "1")
