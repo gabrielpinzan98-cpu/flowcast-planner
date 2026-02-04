@@ -425,7 +425,7 @@
         if((m=q('.tab'))){document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('on')});m.classList.add('on');var nm=m.dataset.t;document.getElementById('p'+nm.charAt(0).toUpperCase()+nm.slice(1)).classList.add('on');return}
         if(q('#btnLogout')){fetch('/api/auth/logout',{method:'POST'}).then(function(){window.location.href='/login'});return}
         if((m=q('[data-per]'))){period=m.dataset.per;renderFluxo();return}
-        if((m=q('[data-tk]'))){api('/api/tasks/toggle',{method:'POST',body:JSON.stringify({key:m.dataset.tk})}).then(function(){renderFluxo();loadStats()});return}
+        if((m=q('[data-tk]'))){var tkEl=m;var wasDone=tkEl.classList.contains('dn');if(wasDone){tkEl.classList.remove('dn');tkEl.querySelector('.ck').textContent=''}else{tkEl.classList.add('dn');tkEl.querySelector('.ck').textContent='✓'}var allTk=document.querySelectorAll('.tk');var total=allTk.length;var done=0;allTk.forEach(function(t){if(t.classList.contains('dn'))done++});var pct=total?Math.round(done/total*100):0;var pi=document.querySelector('.pgi');if(pi){pi.innerHTML='<span>'+done+'/'+total+' concluídos</span><span class="pgp">'+pct+'%</span>'}var pf=document.querySelector('.pgf');if(pf)pf.style.width=pct+'%';api('/api/tasks/toggle',{method:'POST',body:JSON.stringify({key:m.dataset.tk})}).then(function(){loadStats()});return}
         if((m=q('[data-dch]'))){ev.stopPropagation();delCh(m.dataset.dch);return}
         if((m=q('[data-ech]'))){ev.stopPropagation();openChModal(m.dataset.ech);return}
         if(q('#bNC')){openChModal();return}
