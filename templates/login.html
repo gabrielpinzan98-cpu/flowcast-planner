@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowCast — Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg:#060b18;--card:#0c1527;--elev:#111d35;--brd:#1a2d4d;--pri:#2563eb;--pri-l:#60a5fa;--pri-m:rgba(37,99,235,.15);--cyan:#22d3ee;--red:#ef4444;--t1:#e8edf5;--t2:#8899b5;--t3:#4a5e80;--r:12px;--rs:8px;--f:'Outfit',sans-serif}
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:var(--f);background:var(--bg);color:var(--t1);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .auth-card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--brd);border-radius:20px;padding:48px 40px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+        .logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:36px}
+        .logo-i{width:44px;height:44px;background:linear-gradient(135deg,var(--pri),var(--cyan));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(37,99,235,.35)}
+        .logo-t{font-size:28px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,#fff,var(--pri-l));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .auth-card h2{text-align:center;font-size:22px;font-weight:700;margin-bottom:8px}
+        .auth-card p.sub{text-align:center;color:var(--t3);font-size:14px;margin-bottom:32px}
+        .fg{margin-bottom:20px}
+        .fg label{display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--t2)}
+        .fg input{width:100%;padding:14px 16px;background:var(--elev);border:1px solid var(--brd);border-radius:var(--rs);font-size:14px;font-family:var(--f);color:var(--t1);outline:none;transition:border-color .2s}
+        .fg input:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+        .btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--pri),#1d4ed8);color:#fff;border:none;border-radius:100px;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;transition:all .25s;margin-top:8px}
+        .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,99,235,.4)}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+        .link{text-align:center;margin-top:24px;font-size:14px;color:var(--t3)}
+        .link a{color:var(--pri-l);text-decoration:none;font-weight:600}
+        .link a:hover{text-decoration:underline}
+        .error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:12px 16px;border-radius:var(--rs);font-size:13px;margin-bottom:20px;display:none;text-align:center}
+        .error.on{display:block;animation:shake .4s}
+        @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo"><div class="logo-i">⚡</div><span class="logo-t">FlowCast</span></div>
+        <h2>Entrar</h2>
+        <p class="sub">Acesse sua conta para gerenciar seus canais</p>
+        <div class="error" id="err"></div>
+        <div class="fg"><label>E-mail</label><input type="email" id="email" placeholder="seu@email.com" autofocus></div>
+        <div class="fg"><label>Senha</label><input type="password" id="pass" placeholder="Sua senha"></div>
+        <button class="btn" id="btnLogin">Entrar</button>
+        <p class="link">Não tem conta? <a href="/register">Criar conta grátis</a></p>
+    </div>
+<script>
+var btn=document.getElementById('btnLogin');
+var err=document.getElementById('err');
+
+function doLogin(){
+    var email=document.getElementById('email').value.trim();
+    var pass=document.getElementById('pass').value;
+    if(!email||!pass){showErr('Preencha todos os campos');return}
+    btn.disabled=true;btn.textContent='Entrando...';
+    fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pass})})
+    .then(function(r){return r.json().then(function(d){return{ok:r.ok,data:d}})})
+    .then(function(r){
+        if(r.ok){window.location.href='/'}
+        else{showErr(r.data.error||'Erro ao entrar');btn.disabled=false;btn.textContent='Entrar'}
+    }).catch(function(){showErr('Erro de conexão');btn.disabled=false;btn.textContent='Entrar'});
+}
+
+function showErr(m){err.textContent=m;err.classList.add('on');setTimeout(function(){err.classList.remove('on')},4000)}
+
+btn.addEventListener('click',doLogin);
+document.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin()});
+</script>
+</body>
+</html>
