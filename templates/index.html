@@ -478,16 +478,19 @@
                     h+='<span>Pendente</span>';
                 }
                 h+='</div>';
-                h+='<div class="pa"><button class="bi" data-ect="'+ct.id+'" data-ectt="'+esc(ct.title)+'">✏</button><button class="bi dg" data-dct="'+ct.id+'">🗑</button></div>';
+                h+='<div class="pa"><button class="bi" data-ect="'+ct.id+'" data-ectt="'+esc(ct.title)+'" data-ectd="'+(ct.published_at||'')+'" data-ects="'+ct.status+'">✏</button><button class="bi dg" data-dct="'+ct.id+'">🗑</button></div>';
                 h+='</div>';
             });
             c.innerHTML=h;
         });
     }
 
-    function openCtModal(editId,editTitle){
+    function openCtModal(editId,editTitle,editDate,editStatus){
         document.getElementById('mCtT').textContent=editId?'Editar Conteúdo':'Novo Conteúdo';
+        var st=editStatus||'pendente';
         var h='<div class="fg"><label>Título *</label><input id="ctN" value="'+esc(editTitle||'')+'" placeholder="Ex: Como fazer X em 5 minutos"></div>';
+        h+='<div class="fg"><label>Status</label><select id="ctS" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px"><option value="pendente"'+(st==='pendente'?' selected':'')+'>📝 Pendente</option><option value="publicado"'+(st==='publicado'?' selected':'')+'>✅ Publicado</option></select></div>';
+        h+='<div class="fg"><label>Data de Publicação</label><input id="ctD" type="date" value="'+(editDate||'')+'" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px"></div>';
         h+='<div class="mf"><button type="button" class="btn bs" data-close="mCt">Cancelar</button><button type="button" class="btn bp" id="svCt">Salvar</button></div>';
         document.getElementById('mCtB').innerHTML=h;
         document.getElementById('mCtB').dataset.eid=editId||'';
@@ -499,7 +502,9 @@
         var eid=document.getElementById('mCtB').dataset.eid;
         var nm=document.getElementById('ctN').value.trim();
         if(!nm)return;
-        var body={channel_id:curCtCh,title:nm};
+        var st=document.getElementById('ctS').value;
+        var dt=document.getElementById('ctD').value||null;
+        var body={channel_id:curCtCh,title:nm,status:st,published_at:dt};
         var url=eid?'/api/contents/'+eid:'/api/contents';
         var method=eid?'PUT':'POST';
         api(url,{method:method,body:JSON.stringify(body)}).then(function(){
@@ -555,7 +560,7 @@
         if(q('#svCh')){saveCh();return}
         // Contents handlers
         if((m=q('[data-dct]'))){ev.stopPropagation();delCt(m.dataset.dct);return}
-        if((m=q('[data-ect]'))){ev.stopPropagation();openCtModal(m.dataset.ect,m.dataset.ectt);return}
+        if((m=q('[data-ect]'))){ev.stopPropagation();openCtModal(m.dataset.ect,m.dataset.ectt,m.dataset.ectd,m.dataset.ects);return}
         if((m=q('[data-cttg]'))){toggleCt(m.dataset.cttg);return}
         if((m=q('[data-ctch]'))){curCtCh=m.dataset.ctch;renderConteudos();return}
         if((m=q('[data-ctf]'))){ctFilter=m.dataset.ctf;renderConteudos();return}
