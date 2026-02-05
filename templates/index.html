@@ -156,6 +156,26 @@
         .toast{position:fixed;bottom:24px;right:24px;padding:14px 24px;background:var(--card);border:1px solid var(--grn);border-radius:var(--r);color:var(--grn);font-size:14px;font-weight:500;box-shadow:0 8px 30px rgba(0,0,0,.3);transform:translateY(100px);opacity:0;transition:all .3s;z-index:2000}
         .toast.on{transform:translateY(0);opacity:1}
 
+        /* CONTEUDOS */
+        .ctl{display:grid;grid-template-columns:260px 1fr;gap:24px}
+        .cts2{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:18px;height:fit-content}
+        .cts2 h3{font-size:12px;font-weight:700;margin-bottom:16px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px}
+        .ctm{min-width:0}
+        .cth{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.cth h2{font-size:20px;font-weight:700}
+        .ctls{display:flex;flex-direction:column;gap:8px}
+        .cti{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--card);border:1px solid var(--brd);border-radius:var(--r);transition:all .25s}
+        .cti:hover{border-color:var(--pri);box-shadow:var(--glow)}
+        .cti.pub{opacity:.55}
+        .ctck{width:26px;height:26px;border:2px solid var(--brd);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;color:transparent;cursor:pointer;transition:all .2s}
+        .cti.pub .ctck{background:var(--grn);border-color:var(--grn);color:#fff;box-shadow:0 2px 8px rgba(16,185,129,.3)}
+        .ctinf{flex:1;min-width:0}
+        .ctinf h4{font-size:14px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .ctinf span{font-size:12px;color:var(--t3);font-family:var(--fm)}
+        .cti.pub .ctinf h4{text-decoration:line-through;color:var(--t3)}
+        .ctfl{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+        .ctfb{padding:6px 14px;background:var(--card);border:1px solid var(--brd);border-radius:100px;color:var(--t2);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+        .ctfb:hover{border-color:var(--pri);color:var(--t1)}.ctfb.on{background:var(--pri);border-color:var(--pri);color:#fff}
+
         @media(max-width:992px){.side{transform:translateX(-100%)}.mn{margin-left:0}}
         @media(max-width:900px){.prl{grid-template-columns:1fr}.prs2{display:none}.fgr{grid-template-columns:1fr}}
         @media(max-width:600px){.ct{padding:20px}.ph{flex-direction:column;align-items:flex-start}.sts{width:100%;justify-content:space-between}.prs{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:8px}.cg{grid-template-columns:1fr}}
@@ -192,10 +212,12 @@
             <div class="tabs">
                 <button class="tab on" data-t="fluxo">📅 Fluxo</button>
                 <button class="tab" data-t="canais">📺 Canais</button>
+                <button class="tab" data-t="conteudos">🎬 Conteúdos</button>
                 <button class="tab" data-t="prompts">📄 Prompts</button>
             </div>
             <div id="pFluxo" class="pn on"></div>
             <div id="pCanais" class="pn"></div>
+            <div id="pConteudos" class="pn"></div>
             <div id="pPrompts" class="pn"></div>
         </div></main>
     </div>
@@ -206,6 +228,7 @@
 <div class="mo" id="mPr"><div class="mb lg"><div class="mh"><h3 id="mPrT">Novo Prompt</h3><button class="mx" data-close="mPr">&times;</button></div><div class="mbd" id="mPrB"></div></div></div>
 <div class="mo" id="mV"><div class="mb lg"><div class="mh"><h3 id="mVT">Prompt</h3><button class="mx" data-close="mV">&times;</button></div><div class="vp"><pre id="mVP"></pre></div><div style="padding:0 26px 22px;display:flex;justify-content:flex-end;gap:12px"><button class="btn bs" data-close="mV">Fechar</button><button class="btn bp" id="mVC">📋 Copiar</button></div></div></div>
 <div class="mo" id="mConf"><div class="mb" style="max-width:400px"><div class="mh"><h3>Confirmação</h3><button class="mx" data-close="mConf">&times;</button></div><div class="mbd" style="text-align:center"><p id="mConfMsg" style="font-size:15px;color:var(--t2);margin-bottom:24px"></p><div style="display:flex;justify-content:center;gap:12px"><button class="btn bs" data-close="mConf">Cancelar</button><button class="btn bp" id="mConfYes" style="background:linear-gradient(135deg,var(--red),#dc2626)">Excluir</button></div></div></div></div>
+<div class="mo" id="mCt"><div class="mb"><div class="mh"><h3 id="mCtT">Novo Conteúdo</h3><button class="mx" data-close="mCt">&times;</button></div><div class="mbd" id="mCtB"></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -412,9 +435,105 @@
         });
     }
 
+    // ─── Conteúdos ───
+    var curCtCh=null, ctFilter='';
+
+    function renderConteudos(){
+        loadChannels().then(function(chs){
+            var h='<div class="ctl"><div class="cts2"><h3>Canais</h3><div class="pcl">';
+            if(!chs.length) h+='<p style="font-size:13px;color:var(--t3);padding:8px">Nenhum canal</p>';
+            else chs.forEach(function(c){
+                h+='<button class="pc'+(curCtCh===c.id?' on':'')+'" data-ctch="'+c.id+'">'+c.icon+' '+esc(c.name)+'<span class="pcn">'+c.content_count+'</span></button>';
+            });
+            h+='</div></div><div class="ctm"><div class="cth"><h2>🎬 '+(curCtCh?esc((chs.find(function(c){return c.id===curCtCh})||{}).name||''):'Selecione um canal')+'</h2>';
+            if(curCtCh) h+='<button class="btn bp" id="bNCt">+ Novo Conteúdo</button>';
+            h+='</div>';
+            if(curCtCh){
+                h+='<div class="ctfl"><button class="ctfb'+(ctFilter===''?' on':'')+'" data-ctf="">Todos</button><button class="ctfb'+(ctFilter==='pendente'?' on':'')+'" data-ctf="pendente">Pendentes</button><button class="ctfb'+(ctFilter==='publicado'?' on':'')+'" data-ctf="publicado">Publicados</button></div>';
+                h+='<div class="ctls" id="ctList"><div class="em"><div class="emi">⏳</div><p>Carregando...</p></div></div>';
+            } else {
+                h+='<div class="ctls"><div class="em"><div class="emi">🎬</div><p>Selecione um canal para ver os conteúdos</p></div></div>';
+            }
+            h+='</div></div>';
+            document.getElementById('pConteudos').innerHTML=h;
+            if(curCtCh) loadContentsList();
+        });
+    }
+
+    function loadContentsList(){
+        var url='/api/contents/'+curCtCh+(ctFilter?'?status='+ctFilter:'');
+        api(url).then(function(cts){
+            var c=document.getElementById('ctList');
+            if(!cts.length){c.innerHTML='<div class="em"><div class="emi">🎬</div><p>Nenhum conteúdo '+(ctFilter==='pendente'?'pendente':ctFilter==='publicado'?'publicado':'cadastrado')+'</p><small>Adicione títulos para organizar sua produção</small></div>';return}
+            var h='';
+            cts.forEach(function(ct){
+                var isPub=ct.status==='publicado';
+                h+='<div class="cti'+(isPub?' pub':'')+'">';
+                h+='<div class="ctck" data-cttg="'+ct.id+'">'+(isPub?'✓':'')+'</div>';
+                h+='<div class="ctinf"><h4>'+esc(ct.title)+'</h4>';
+                if(isPub&&ct.published_at){
+                    var d=ct.published_at.split('-');
+                    h+='<span>Publicado em '+d[2]+'/'+d[1]+'/'+d[0]+'</span>';
+                } else {
+                    h+='<span>Pendente</span>';
+                }
+                h+='</div>';
+                h+='<div class="pa"><button class="bi" data-ect="'+ct.id+'" data-ectt="'+esc(ct.title)+'">✏</button><button class="bi dg" data-dct="'+ct.id+'">🗑</button></div>';
+                h+='</div>';
+            });
+            c.innerHTML=h;
+        });
+    }
+
+    function openCtModal(editId,editTitle){
+        document.getElementById('mCtT').textContent=editId?'Editar Conteúdo':'Novo Conteúdo';
+        var h='<div class="fg"><label>Título *</label><input id="ctN" value="'+esc(editTitle||'')+'" placeholder="Ex: Como fazer X em 5 minutos"></div>';
+        h+='<div class="mf"><button type="button" class="btn bs" data-close="mCt">Cancelar</button><button type="button" class="btn bp" id="svCt">Salvar</button></div>';
+        document.getElementById('mCtB').innerHTML=h;
+        document.getElementById('mCtB').dataset.eid=editId||'';
+        document.getElementById('mCt').classList.add('on');
+        setTimeout(function(){document.getElementById('ctN').focus()},100);
+    }
+
+    function saveCt(){
+        var eid=document.getElementById('mCtB').dataset.eid;
+        var nm=document.getElementById('ctN').value.trim();
+        if(!nm)return;
+        var body={channel_id:curCtCh,title:nm};
+        var url=eid?'/api/contents/'+eid:'/api/contents';
+        var method=eid?'PUT':'POST';
+        api(url,{method:method,body:JSON.stringify(body)}).then(function(){
+            document.getElementById('mCt').classList.remove('on');
+            loadContentsList();
+            loadChannels();
+            toast(eid?'✅ Conteúdo atualizado!':'✅ Conteúdo adicionado!');
+        });
+    }
+
+    function toggleCt(id){
+        var el=document.querySelector('[data-cttg="'+id+'"]');
+        if(el){
+            var row=el.closest('.cti');
+            var wasPub=row.classList.contains('pub');
+            if(wasPub){row.classList.remove('pub');el.textContent='';row.querySelector('.ctinf span').textContent='Pendente';row.querySelector('.ctinf h4').style.textDecoration='none';row.querySelector('.ctinf h4').style.color=''}
+            else{row.classList.add('pub');el.textContent='✓';row.querySelector('.ctinf span').textContent='Publicado agora';row.querySelector('.ctinf h4').style.textDecoration='line-through';row.querySelector('.ctinf h4').style.color='var(--t3)'}
+        }
+        api('/api/contents/'+id+'/toggle',{method:'POST'}).then(function(){loadChannels()});
+    }
+
+    function delCt(id){
+        showConfirm('Excluir este conteúdo?',function(){
+            api('/api/contents/'+id,{method:'DELETE'}).then(function(){
+                loadContentsList();
+                loadChannels();
+                toast('🗑️ Conteúdo excluído');
+            });
+        });
+    }
+
     // ─── Refresh ───
     function refreshAll(){
-        loadChannels().then(function(){renderFluxo();renderCanais();renderPrompts();loadStats()});
+        loadChannels().then(function(){renderFluxo();renderCanais();renderConteudos();renderPrompts();loadStats()});
     }
 
     // ─── Event Delegation ───
@@ -434,6 +553,14 @@
         if(q('#aT')){document.getElementById('fTms').insertAdjacentHTML('beforeend','<div class="tr"><input type="time" value="12:00"><button type="button" class="bi rmt">✕</button></div>');return}
         if((m=q('.rmt'))){var rows=document.querySelectorAll('#fTms .tr');if(rows.length>1)m.closest('.tr').remove();return}
         if(q('#svCh')){saveCh();return}
+        // Contents handlers
+        if((m=q('[data-dct]'))){ev.stopPropagation();delCt(m.dataset.dct);return}
+        if((m=q('[data-ect]'))){ev.stopPropagation();openCtModal(m.dataset.ect,m.dataset.ectt);return}
+        if((m=q('[data-cttg]'))){toggleCt(m.dataset.cttg);return}
+        if((m=q('[data-ctch]'))){curCtCh=m.dataset.ctch;renderConteudos();return}
+        if((m=q('[data-ctf]'))){ctFilter=m.dataset.ctf;renderConteudos();return}
+        if(q('#bNCt')){openCtModal();return}
+        if(q('#svCt')){saveCt();return}
         if((m=q('[data-dpr]'))){ev.stopPropagation();delPr(m.dataset.dpr);return}
         if((m=q('[data-epr]'))){ev.stopPropagation();openPrModal(m.dataset.epr);return}
         if((m=q('[data-vpr]'))){viewPr(m.dataset.vpr);return}
