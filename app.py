@@ -14,13 +14,16 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import (
     Flask, render_template, request, jsonify, g,
-    session, redirect, url_for
+    session, redirect, url_for, send_file
 )
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import base64
+from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max upload
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
@@ -106,8 +109,13 @@ def init_db():
             id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
             title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pendente',
-            published_at TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            published_at TEXT, thumbnail TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )""")
+    # Add thumbnail column if table already exists without it
+    try:
+        cur.execute("ALTER TABLE contents ADD COLUMN IF NOT EXISTS thumbnail TEXT")
+    except Exception:
+        pass
     conn.commit()
     cur.close()
     conn.close()
@@ -402,18 +410,57 @@ def api_contents(channel_id):
 @app.route("/api/contents", methods=["POST"])
 @login_required
 def api_create_content():
-    uid = current_user_id(); data = request.json; ct_id = new_id()
-    db_execute("INSERT INTO contents (id, user_id, channel_id, title, status, published_at) VALUES (%s,%s,%s,%s,%s,%s)",
-        (ct_id, uid, data["channel_id"], data["title"], data.get("status","pendente"), data.get("published_at") or None))
+    uid = current_user_id()
+    data = request.json; ct_id = new_id()
+    thumb = data.get("thumbnail") or None
+    db_execute("INSERT INTO contents (id, user_id, channel_id, title, status, published_at, thumbnail) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+        (ct_id, uid, data["channel_id"], data["title"], data.get("status","pendente"), data.get("published_at") or None, thumb))
     db_commit(); return jsonify({"id": ct_id, "ok": True})
 
 @app.route("/api/contents/<ct_id>", methods=["PUT"])
 @login_required
 def api_update_content(ct_id):
     uid = current_user_id(); data = request.json
-    db_execute("UPDATE contents SET title=%s, status=%s, published_at=%s WHERE id=%s AND user_id=%s",
-        (data["title"], data.get("status","pendente"), data.get("published_at") or None, ct_id, uid))
+    if "thumbnail" in data:
+        db_execute("UPDATE contents SET title=%s, status=%s, published_at=%s, thumbnail=%s WHERE id=%s AND user_id=%s",
+            (data["title"], data.get("status","pendente"), data.get("published_at") or None, data.get("thumbnail") or None, ct_id, uid))
+    else:
+        db_execute("UPDATE contents SET title=%s, status=%s, published_at=%s WHERE id=%s AND user_id=%s",
+            (data["title"], data.get("status","pendente"), data.get("published_at") or None, ct_id, uid))
     db_commit(); return jsonify({"ok": True})
+
+@app.route("/api/contents/<ct_id>/thumbnail", methods=["POST"])
+@login_required
+def api_upload_thumbnail(ct_id):
+    uid = current_user_id()
+    ct = db_fetchone("SELECT id FROM contents WHERE id = %s AND user_id = %s", (ct_id, uid))
+    if not ct: return jsonify({"error": "not found"}), 404
+    if 'file' in request.files:
+        f = request.files['file']
+        if f and f.filename:
+            data = f.read()
+            mime = f.content_type or 'image/jpeg'
+            b64 = base64.b64encode(data).decode('utf-8')
+            thumb_data = f"data:{mime};base64,{b64}"
+            db_execute("UPDATE contents SET thumbnail=%s WHERE id=%s AND user_id=%s", (thumb_data, ct_id, uid))
+            db_commit()
+            return jsonify({"ok": True, "thumbnail": thumb_data})
+    return jsonify({"error": "no file"}), 400
+
+@app.route("/api/contents/<ct_id>/thumbnail", methods=["DELETE"])
+@login_required
+def api_delete_thumbnail(ct_id):
+    uid = current_user_id()
+    db_execute("UPDATE contents SET thumbnail=NULL WHERE id=%s AND user_id=%s", (ct_id, uid))
+    db_commit(); return jsonify({"ok": True})
+
+@app.route("/api/contents/<ct_id>/detail")
+@login_required
+def api_content_detail(ct_id):
+    uid = current_user_id()
+    ct = db_fetchone("SELECT * FROM contents WHERE id = %s AND user_id = %s", (ct_id, uid))
+    if not ct: return jsonify({"error": "not found"}), 404
+    fix_dt(ct); return jsonify(ct)
 
 @app.route("/api/contents/<ct_id>/toggle", methods=["POST"])
 @login_required
