@@ -82,6 +82,17 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             UNIQUE(user_id, task_key)
         );
+        CREATE TABLE IF NOT EXISTS contents (
+            id           TEXT PRIMARY KEY,
+            user_id      TEXT NOT NULL,
+            channel_id   TEXT NOT NULL,
+            title        TEXT NOT NULL,
+            status       TEXT NOT NULL DEFAULT 'pendente',
+            published_at TEXT,
+            created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
+        );
     """)
     db.commit()
     db.close()
@@ -396,6 +407,14 @@ def api_channels():
             "SELECT COUNT(*) c FROM prompts WHERE channel_id = ? AND user_id = ?",
             (ch["id"], uid),
         ).fetchone()["c"]
+        ch["content_count"] = db.execute(
+            "SELECT COUNT(*) c FROM contents WHERE channel_id = ? AND user_id = ?",
+            (ch["id"], uid),
+        ).fetchone()["c"]
+        ch["content_pending"] = db.execute(
+            "SELECT COUNT(*) c FROM contents WHERE channel_id = ? AND user_id = ? AND status = 'pendente'",
+            (ch["id"], uid),
+        ).fetchone()["c"]
     return jsonify(channels)
 
 
@@ -512,6 +531,108 @@ def api_prompt_detail(pr_id):
     if not pr:
         return jsonify({"error": "not found"}), 404
     return jsonify(pr)
+
+
+# ── API: Contents ──
+
+@app.route("/api/contents/<channel_id>")
+@login_required
+def api_contents(channel_id):
+    uid = current_user_id()
+    db = get_db()
+    status_filter = request.args.get("status", "")
+    if status_filter:
+        contents = rows_to_list(
+            db.execute(
+                "SELECT * FROM contents WHERE channel_id = ? AND user_id = ? AND status = ? ORDER BY created_at DESC",
+                (channel_id, uid, status_filter),
+            ).fetchall()
+        )
+    else:
+        contents = rows_to_list(
+            db.execute(
+                "SELECT * FROM contents WHERE channel_id = ? AND user_id = ? ORDER BY CASE status WHEN 'pendente' THEN 0 WHEN 'publicado' THEN 1 END, created_at DESC",
+                (channel_id, uid),
+            ).fetchall()
+        )
+    return jsonify(contents)
+
+
+@app.route("/api/contents", methods=["POST"])
+@login_required
+def api_create_content():
+    uid = current_user_id()
+    data = request.json
+    ct_id = new_id()
+    db = get_db()
+    db.execute(
+        """INSERT INTO contents (id, user_id, channel_id, title, status, published_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (ct_id, uid, data["channel_id"], data["title"],
+         data.get("status", "pendente"), data.get("published_at") or None),
+    )
+    db.commit()
+    return jsonify({"id": ct_id, "ok": True})
+
+
+@app.route("/api/contents/<ct_id>", methods=["PUT"])
+@login_required
+def api_update_content(ct_id):
+    uid = current_user_id()
+    data = request.json
+    db = get_db()
+    db.execute(
+        "UPDATE contents SET title=?, status=?, published_at=? WHERE id=? AND user_id=?",
+        (data["title"], data.get("status", "pendente"),
+         data.get("published_at") or None, ct_id, uid),
+    )
+    db.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/contents/<ct_id>/toggle", methods=["POST"])
+@login_required
+def api_toggle_content(ct_id):
+    uid = current_user_id()
+    db = get_db()
+    ct = row_to_dict(
+        db.execute("SELECT * FROM contents WHERE id = ? AND user_id = ?", (ct_id, uid)).fetchone()
+    )
+    if not ct:
+        return jsonify({"error": "not found"}), 404
+    if ct["status"] == "pendente":
+        new_status = "publicado"
+        pub_date = datetime.now().strftime("%Y-%m-%d")
+    else:
+        new_status = "pendente"
+        pub_date = None
+    db.execute(
+        "UPDATE contents SET status=?, published_at=? WHERE id=? AND user_id=?",
+        (new_status, pub_date, ct_id, uid),
+    )
+    db.commit()
+    return jsonify({"ok": True, "status": new_status, "published_at": pub_date})
+
+
+@app.route("/api/contents/<ct_id>", methods=["DELETE"])
+@login_required
+def api_delete_content(ct_id):
+    uid = current_user_id()
+    db = get_db()
+    db.execute("DELETE FROM contents WHERE id = ? AND user_id = ?", (ct_id, uid))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/contents-stats")
+@login_required
+def api_contents_stats():
+    uid = current_user_id()
+    db = get_db()
+    total = db.execute("SELECT COUNT(*) c FROM contents WHERE user_id = ?", (uid,)).fetchone()["c"]
+    published = db.execute("SELECT COUNT(*) c FROM contents WHERE user_id = ? AND status = 'publicado'", (uid,)).fetchone()["c"]
+    pending = total - published
+    return jsonify({"total": total, "published": published, "pending": pending})
 
 
 # ────────────────────────────── MAIN ────────────────────────────────
