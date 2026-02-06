@@ -204,6 +204,10 @@
         .achhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
         .achhd h2{font-size:18px;font-weight:700}
 
+        /* Page switching */
+        .page{display:none}
+        .page.on{display:block}
+
         @media(max-width:992px){.side{transform:translateX(-100%)}.mn{margin-left:0}}
         @media(max-width:900px){.prl{grid-template-columns:1fr}.prs2{display:none}.fgr{grid-template-columns:1fr}.ctl{grid-template-columns:1fr}}
         @media(max-width:600px){.ct{padding:20px}.ph{flex-direction:column;align-items:flex-start}.sts{width:100%;justify-content:space-between}.prs{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:8px}.cg{grid-template-columns:1fr}.achi{flex-direction:column}.achimg,.achnoimg{width:100%;height:140px}}
@@ -228,24 +232,34 @@
 
     <!-- MAIN -->
     <div class="mn">
-        <header class="topb"><h1>Planner</h1><div style="display:flex;align-items:center;gap:12px"><div class="up"><div class="ua">{{ user_name[:2]|upper }}</div><span>{{ user_name }}</span></div><button class="btn bs bsm" id="btnLogout" style="border-radius:100px">Sair</button></div></header>
-        <main class="ct"><div class="pl">
-            <div class="ph"><div><h1>📋 Flow<em>Cast</em> Planner</h1><p>Organize sua produção de conteúdo</p></div>
-                <div class="sts"><div class="st"><b id="sT">0</b><small>Hoje</small></div><div class="st"><b id="sW">0</b><small>Semana</small></div><div class="st"><b id="sC">0</b><small>Canais</small></div></div>
-            </div>
-            <div class="tabs">
-                <button class="tab on" data-t="fluxo">📅 Fluxo</button>
-                <button class="tab" data-t="canais">📺 Canais</button>
-                <button class="tab" data-t="conteudos">🎬 Conteúdos</button>
-                <button class="tab" data-t="prompts">📄 Prompts</button>
-                <button class="tab" data-t="conquistas">🏆 Conquistas</button>
-            </div>
-            <div id="pFluxo" class="pn on"></div>
-            <div id="pCanais" class="pn"></div>
-            <div id="pConteudos" class="pn"></div>
-            <div id="pPrompts" class="pn"></div>
-            <div id="pConquistas" class="pn"></div>
-        </div></main>
+        <!-- PAGE: PLANNER -->
+        <div id="pagePlanner" class="page on">
+            <header class="topb"><h1>Planner</h1><div style="display:flex;align-items:center;gap:12px"><div class="up"><div class="ua">{{ user_name[:2]|upper }}</div><span>{{ user_name }}</span></div><button class="btn bs bsm" id="btnLogout" style="border-radius:100px">Sair</button></div></header>
+            <main class="ct"><div class="pl">
+                <div class="ph"><div><h1>📋 Flow<em>Cast</em> Planner</h1><p>Organize sua produção de conteúdo</p></div>
+                    <div class="sts"><div class="st"><b id="sT">0</b><small>Hoje</small></div><div class="st"><b id="sW">0</b><small>Semana</small></div><div class="st"><b id="sC">0</b><small>Canais</small></div></div>
+                </div>
+                <div class="tabs">
+                    <button class="tab on" data-t="fluxo">📅 Fluxo</button>
+                    <button class="tab" data-t="canais">📺 Canais</button>
+                    <button class="tab" data-t="conteudos">🎬 Conteúdos</button>
+                    <button class="tab" data-t="prompts">📄 Prompts</button>
+                </div>
+                <div id="pFluxo" class="pn on"></div>
+                <div id="pCanais" class="pn"></div>
+                <div id="pConteudos" class="pn"></div>
+                <div id="pPrompts" class="pn"></div>
+            </div></main>
+        </div>
+
+        <!-- PAGE: CONQUISTAS -->
+        <div id="pageConquistas" class="page">
+            <header class="topb"><h1>Conquistas</h1><div style="display:flex;align-items:center;gap:12px"><div class="up"><div class="ua">{{ user_name[:2]|upper }}</div><span>{{ user_name }}</span></div><button class="btn bs bsm" id="btnLogout3" style="border-radius:100px">Sair</button></div></header>
+            <main class="ct"><div class="pl">
+                <div class="ph"><div><h1>🏆 Conquistas</h1><p>Documente seus recordes e marcos importantes</p></div></div>
+                <div id="pConquistas"></div>
+            </div></main>
+        </div>
     </div>
 </div>
 
@@ -697,7 +711,7 @@
 
     // ─── Refresh ───
     function refreshAll(){
-        loadChannels().then(function(){renderFluxo();renderCanais();renderConteudos();renderPrompts();renderConquistas();loadStats()});
+        loadChannels().then(function(){renderFluxo();renderCanais();renderConteudos();renderPrompts();loadStats()});
     }
 
     // ─── Event Delegation ───
@@ -705,26 +719,22 @@
         var el=ev.target;
         function q(sel){return el.closest(sel)}
         var m;
-        // Sidebar navigation
+        // Sidebar navigation - switch pages
         if((m=q('[data-nav]'))){
             ev.preventDefault();
             var nav=m.dataset.nav;
             document.querySelectorAll('.nl').forEach(function(n){n.classList.remove('on')});
             m.classList.add('on');
+            document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on')});
             if(nav==='planner'){
-                document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});
-                document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('on')});
-                document.querySelector('.tab[data-t="fluxo"]').classList.add('on');
-                document.getElementById('pFluxo').classList.add('on');
+                document.getElementById('pagePlanner').classList.add('on');
             } else if(nav==='conquistas'){
-                document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});
-                document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('on')});
-                document.querySelector('.tab[data-t="conquistas"]').classList.add('on');
-                document.getElementById('pConquistas').classList.add('on');
+                document.getElementById('pageConquistas').classList.add('on');
+                renderConquistas();
             }
             return;
         }
-        if(q('#btnLogout2')){fetch('/api/auth/logout',{method:'POST'}).then(function(){window.location.href='/login'});return}
+        if(q('#btnLogout2')||q('#btnLogout3')){fetch('/api/auth/logout',{method:'POST'}).then(function(){window.location.href='/login'});return}
         if((m=q('.tab'))){document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('on')});m.classList.add('on');var nm=m.dataset.t;document.getElementById('p'+nm.charAt(0).toUpperCase()+nm.slice(1)).classList.add('on');return}
         if(q('#btnLogout')){fetch('/api/auth/logout',{method:'POST'}).then(function(){window.location.href='/login'});return}
         if((m=q('[data-per]'))){period=m.dataset.per;renderFluxo();return}
