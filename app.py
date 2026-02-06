@@ -111,6 +111,13 @@ def init_db():
             title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pendente',
             published_at TEXT, thumbnail TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )""")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS achievements (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            channel_id TEXT REFERENCES channels(id) ON DELETE SET NULL,
+            title TEXT NOT NULL, description TEXT, achieved_at TEXT,
+            image TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )""")
     # Add thumbnail column if table already exists without it
     try:
         cur.execute("ALTER TABLE contents ADD COLUMN IF NOT EXISTS thumbnail TEXT")
@@ -487,6 +494,65 @@ def api_contents_stats():
     total = db_fetchone("SELECT COUNT(*) AS c FROM contents WHERE user_id = %s", (uid,))["c"]
     published = db_fetchone("SELECT COUNT(*) AS c FROM contents WHERE user_id = %s AND status = 'publicado'", (uid,))["c"]
     return jsonify({"total": total, "published": published, "pending": total - published})
+
+
+# ── API: Achievements ──
+
+@app.route("/api/achievements")
+@login_required
+def api_achievements():
+    uid = current_user_id()
+    achs = db_fetchall("""
+        SELECT a.*, c.name as channel_name, c.icon as channel_icon, c.color as channel_color 
+        FROM achievements a 
+        LEFT JOIN channels c ON a.channel_id = c.id 
+        WHERE a.user_id = %s 
+        ORDER BY a.achieved_at DESC NULLS LAST, a.created_at DESC
+    """, (uid,))
+    for a in achs: fix_dt(a)
+    return jsonify(achs)
+
+@app.route("/api/achievements", methods=["POST"])
+@login_required
+def api_create_achievement():
+    uid = current_user_id()
+    data = request.json; ach_id = new_id()
+    db_execute("""INSERT INTO achievements (id, user_id, channel_id, title, description, achieved_at, image) 
+        VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+        (ach_id, uid, data.get("channel_id") or None, data["title"], 
+         data.get("description") or None, data.get("achieved_at") or None, data.get("image") or None))
+    db_commit(); return jsonify({"id": ach_id, "ok": True})
+
+@app.route("/api/achievements/<ach_id>", methods=["PUT"])
+@login_required
+def api_update_achievement(ach_id):
+    uid = current_user_id(); data = request.json
+    if "image" in data:
+        db_execute("""UPDATE achievements SET title=%s, description=%s, achieved_at=%s, channel_id=%s, image=%s 
+            WHERE id=%s AND user_id=%s""",
+            (data["title"], data.get("description") or None, data.get("achieved_at") or None,
+             data.get("channel_id") or None, data.get("image") or None, ach_id, uid))
+    else:
+        db_execute("""UPDATE achievements SET title=%s, description=%s, achieved_at=%s, channel_id=%s 
+            WHERE id=%s AND user_id=%s""",
+            (data["title"], data.get("description") or None, data.get("achieved_at") or None,
+             data.get("channel_id") or None, ach_id, uid))
+    db_commit(); return jsonify({"ok": True})
+
+@app.route("/api/achievements/<ach_id>", methods=["DELETE"])
+@login_required
+def api_delete_achievement(ach_id):
+    uid = current_user_id()
+    db_execute("DELETE FROM achievements WHERE id = %s AND user_id = %s", (ach_id, uid))
+    db_commit(); return jsonify({"ok": True})
+
+@app.route("/api/achievements/<ach_id>/detail")
+@login_required
+def api_achievement_detail(ach_id):
+    uid = current_user_id()
+    ach = db_fetchone("SELECT * FROM achievements WHERE id = %s AND user_id = %s", (ach_id, uid))
+    if not ach: return jsonify({"error": "not found"}), 404
+    fix_dt(ach); return jsonify(ach)
 
 
 # ────────────────────────────── MAIN ────────────────────────────────
