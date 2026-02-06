@@ -215,16 +215,12 @@
     <aside class="side">
         <div class="side-hd"><a href="/" class="logo"><div class="logo-i">⚡</div><span class="logo-t">FlowCast</span></a></div>
         <nav class="side-nav">
-            <div class="ns"><span class="ns-t">Menu</span>
-                <a href="#" class="nl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Visão Geral</span></a>
-                <a href="#" class="nl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Downloads</span></a>
-            </div>
             <div class="ns"><span class="ns-t">Ferramentas</span>
-                <a href="/" class="nl on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Planner</span></a>
-                <a href="#" class="nl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6v2H9zM8 5v5l-3 8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2l-3-8V5"/><path d="M7 14h10"/></svg><span>Laboratório</span><span class="nb" style="background:linear-gradient(135deg,#2563eb,#22d3ee)">NEW</span></a>
+                <a href="#" class="nl on" data-nav="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Planner</span></a>
+                <a href="#" class="nl" data-nav="conquistas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg><span>Conquistas</span></a>
             </div>
             <div class="ns"><span class="ns-t">Conta</span>
-                <a href="#" class="nl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.38.64 1.08 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Configurações</span></a>
+                <a href="#" class="nl" id="btnLogout2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Sair</span></a>
             </div>
         </nav>
         <div class="side-ft"><span class="badge">FlowCast PRO</span></div>
@@ -709,6 +705,26 @@
         var el=ev.target;
         function q(sel){return el.closest(sel)}
         var m;
+        // Sidebar navigation
+        if((m=q('[data-nav]'))){
+            ev.preventDefault();
+            var nav=m.dataset.nav;
+            document.querySelectorAll('.nl').forEach(function(n){n.classList.remove('on')});
+            m.classList.add('on');
+            if(nav==='planner'){
+                document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});
+                document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('on')});
+                document.querySelector('.tab[data-t="fluxo"]').classList.add('on');
+                document.getElementById('pFluxo').classList.add('on');
+            } else if(nav==='conquistas'){
+                document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});
+                document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('on')});
+                document.querySelector('.tab[data-t="conquistas"]').classList.add('on');
+                document.getElementById('pConquistas').classList.add('on');
+            }
+            return;
+        }
+        if(q('#btnLogout2')){fetch('/api/auth/logout',{method:'POST'}).then(function(){window.location.href='/login'});return}
         if((m=q('.tab'))){document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('on')});m.classList.add('on');var nm=m.dataset.t;document.getElementById('p'+nm.charAt(0).toUpperCase()+nm.slice(1)).classList.add('on');return}
         if(q('#btnLogout')){fetch('/api/auth/logout',{method:'POST'}).then(function(){window.location.href='/login'});return}
         if((m=q('[data-per]'))){period=m.dataset.per;renderFluxo();return}
