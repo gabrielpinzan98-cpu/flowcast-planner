@@ -190,9 +190,23 @@
         .ctfb{padding:6px 14px;background:var(--card);border:1px solid var(--brd);border-radius:100px;color:var(--t2);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
         .ctfb:hover{border-color:var(--pri);color:var(--t1)}.ctfb.on{background:var(--pri);border-color:var(--pri);color:#fff}
 
+        /* Achievements */
+        .achls{display:flex;flex-direction:column;gap:12px}
+        .achi{display:flex;gap:16px;padding:20px;background:var(--card);border:1px solid var(--brd);border-radius:var(--r);transition:all .25s}
+        .achi:hover{border-color:var(--pri);box-shadow:var(--glow)}
+        .achimg{width:120px;height:80px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer;border:1px solid var(--brd)}
+        .achnoimg{width:120px;height:80px;border-radius:8px;flex-shrink:0;background:var(--bg);border:1px dashed var(--brd);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--t3)}
+        .achinf{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+        .achinf h4{font-size:15px;font-weight:600;margin:0}
+        .achinf p{font-size:13px;color:var(--t2);margin:0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .achmt{display:flex;align-items:center;gap:12px;margin-top:auto;font-size:12px;color:var(--t3)}
+        .achmt .achch{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--bg);border-radius:100px}
+        .achhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+        .achhd h2{font-size:18px;font-weight:700}
+
         @media(max-width:992px){.side{transform:translateX(-100%)}.mn{margin-left:0}}
-        @media(max-width:900px){.prl{grid-template-columns:1fr}.prs2{display:none}.fgr{grid-template-columns:1fr}}
-        @media(max-width:600px){.ct{padding:20px}.ph{flex-direction:column;align-items:flex-start}.sts{width:100%;justify-content:space-between}.prs{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:8px}.cg{grid-template-columns:1fr}}
+        @media(max-width:900px){.prl{grid-template-columns:1fr}.prs2{display:none}.fgr{grid-template-columns:1fr}.ctl{grid-template-columns:1fr}}
+        @media(max-width:600px){.ct{padding:20px}.ph{flex-direction:column;align-items:flex-start}.sts{width:100%;justify-content:space-between}.prs{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:8px}.cg{grid-template-columns:1fr}.achi{flex-direction:column}.achimg,.achnoimg{width:100%;height:140px}}
     </style>
 </head>
 <body>
@@ -228,11 +242,13 @@
                 <button class="tab" data-t="canais">📺 Canais</button>
                 <button class="tab" data-t="conteudos">🎬 Conteúdos</button>
                 <button class="tab" data-t="prompts">📄 Prompts</button>
+                <button class="tab" data-t="conquistas">🏆 Conquistas</button>
             </div>
             <div id="pFluxo" class="pn on"></div>
             <div id="pCanais" class="pn"></div>
             <div id="pConteudos" class="pn"></div>
             <div id="pPrompts" class="pn"></div>
+            <div id="pConquistas" class="pn"></div>
         </div></main>
     </div>
 </div>
@@ -243,6 +259,7 @@
 <div class="mo" id="mV"><div class="mb lg"><div class="mh"><h3 id="mVT">Prompt</h3><button class="mx" data-close="mV">&times;</button></div><div class="vp"><pre id="mVP"></pre></div><div style="padding:0 26px 22px;display:flex;justify-content:flex-end;gap:12px"><button class="btn bs" data-close="mV">Fechar</button><button class="btn bp" id="mVC">📋 Copiar</button></div></div></div>
 <div class="mo" id="mConf"><div class="mb" style="max-width:400px"><div class="mh"><h3>Confirmação</h3><button class="mx" data-close="mConf">&times;</button></div><div class="mbd" style="text-align:center"><p id="mConfMsg" style="font-size:15px;color:var(--t2);margin-bottom:24px"></p><div style="display:flex;justify-content:center;gap:12px"><button class="btn bs" data-close="mConf">Cancelar</button><button class="btn bp" id="mConfYes" style="background:linear-gradient(135deg,var(--red),#dc2626)">Excluir</button></div></div></div></div>
 <div class="mo" id="mCt"><div class="mb"><div class="mh"><h3 id="mCtT">Novo Conteúdo</h3><button class="mx" data-close="mCt">&times;</button></div><div class="mbd" id="mCtB"></div></div></div>
+<div class="mo" id="mAch"><div class="mb"><div class="mh"><h3 id="mAchT">Nova Conquista</h3><button class="mx" data-close="mAch">&times;</button></div><div class="mbd" id="mAchB"></div></div></div>
 <div class="ctlb" id="ctLightbox" onclick="this.classList.remove('on')"><span class="ctlbx">&times;</span><img id="ctLbImg" src="" alt="Thumbnail"></div>
 <div class="toast" id="toast"></div>
 
@@ -582,9 +599,109 @@
         });
     }
 
+    // ─── Conquistas ───
+    var achImgData=null;
+    function renderConquistas(){
+        loadChannels().then(function(chs){
+            api('/api/achievements').then(function(achs){
+                var h='<div class="achhd"><h2>🏆 Suas Conquistas</h2><button class="btn bp" id="bNAch">+ Nova Conquista</button></div>';
+                if(!achs.length){
+                    h+='<div class="em"><div class="emi">🏆</div><p>Nenhuma conquista registrada</p><small>Documente seus recordes e marcos importantes!</small></div>';
+                } else {
+                    h+='<div class="achls">';
+                    achs.forEach(function(a){
+                        h+='<div class="achi">';
+                        if(a.image){
+                            h+='<img class="achimg" src="'+a.image+'" data-achimg="'+a.id+'" alt="Print">';
+                        } else {
+                            h+='<div class="achnoimg">🏆</div>';
+                        }
+                        h+='<div class="achinf"><h4>'+esc(a.title)+'</h4>';
+                        if(a.description) h+='<p>'+esc(a.description)+'</p>';
+                        h+='<div class="achmt">';
+                        if(a.achieved_at){var d=a.achieved_at.split('-');h+='<span>📅 '+d[2]+'/'+d[1]+'/'+d[0]+'</span>';}
+                        if(a.channel_name) h+='<span class="achch" style="background:'+a.channel_color+'20;color:'+a.channel_color+'">'+a.channel_icon+' '+esc(a.channel_name)+'</span>';
+                        h+='</div></div>';
+                        h+='<div class="pa"><button class="bi" data-each="'+a.id+'">✏</button><button class="bi dg" data-dach="'+a.id+'">🗑</button></div>';
+                        h+='</div>';
+                    });
+                    h+='</div>';
+                }
+                document.getElementById('pConquistas').innerHTML=h;
+            });
+        });
+    }
+
+    function openAchModal(editId){
+        document.getElementById('mAchT').textContent=editId?'Editar Conquista':'Nova Conquista';
+        achImgData=null;
+        var h='<div class="fg"><label>Título da Conquista *</label><input id="achN" placeholder="Ex: 1000 inscritos!"></div>';
+        h+='<div class="fg"><label>Print/Imagem</label><div class="thumbup"><label>📁 Escolher imagem<input type="file" id="achFile" accept="image/*"></label></div><div id="achPrev"></div></div>';
+        h+='<div class="fg"><label>Descrição</label><textarea id="achDesc" rows="3" placeholder="Detalhes sobre essa conquista..." style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px;resize:vertical"></textarea></div>';
+        h+='<div class="fg"><label>Data da Conquista</label><input id="achDate" type="date" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px"></div>';
+        h+='<div class="fg"><label>Canal (opcional)</label><select id="achCh" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px"><option value="">Nenhum canal específico</option>';
+        allChannels.forEach(function(c){h+='<option value="'+c.id+'">'+c.icon+' '+esc(c.name)+'</option>';});
+        h+='</select></div>';
+        h+='<div class="mf"><button type="button" class="btn bs" data-close="mAch">Cancelar</button><button type="button" class="btn bp" id="svAch">Salvar</button></div>';
+        document.getElementById('mAchB').innerHTML=h;
+        document.getElementById('mAchB').dataset.eid=editId||'';
+        document.getElementById('mAch').classList.add('on');
+        // File handler
+        document.getElementById('achFile').onchange=function(e){
+            var file=e.target.files[0];
+            if(!file)return;
+            if(file.size>3*1024*1024){toast('⚠️ Imagem muito grande (máx 3MB)');return}
+            var reader=new FileReader();
+            reader.onload=function(ev){
+                achImgData=ev.target.result;
+                document.getElementById('achPrev').innerHTML='<div class="thumbprev"><img src="'+achImgData+'"><button type="button" class="thumbrm" onclick="achImgData=\'remove\';this.parentElement.remove()">✕</button></div>';
+            };
+            reader.readAsDataURL(file);
+        };
+        // If editing, load existing data
+        if(editId){
+            api('/api/achievements/'+editId+'/detail').then(function(a){
+                document.getElementById('achN').value=a.title||'';
+                document.getElementById('achDesc').value=a.description||'';
+                document.getElementById('achDate').value=a.achieved_at||'';
+                document.getElementById('achCh').value=a.channel_id||'';
+                if(a.image){
+                    document.getElementById('achPrev').innerHTML='<div class="thumbprev"><img src="'+a.image+'"><button type="button" class="thumbrm" onclick="achImgData=\'remove\';this.parentElement.remove()">✕</button></div>';
+                }
+            });
+        }
+        setTimeout(function(){document.getElementById('achN').focus()},100);
+    }
+
+    function saveAch(){
+        var eid=document.getElementById('mAchB').dataset.eid;
+        var nm=document.getElementById('achN').value.trim();
+        if(!nm)return;
+        var body={title:nm,description:document.getElementById('achDesc').value.trim()||null,achieved_at:document.getElementById('achDate').value||null,channel_id:document.getElementById('achCh').value||null};
+        if(achImgData==='remove'){body.image=null}
+        else if(achImgData){body.image=achImgData}
+        var url=eid?'/api/achievements/'+eid:'/api/achievements';
+        var method=eid?'PUT':'POST';
+        api(url,{method:method,body:JSON.stringify(body)}).then(function(){
+            document.getElementById('mAch').classList.remove('on');
+            achImgData=null;
+            renderConquistas();
+            toast(eid?'✅ Conquista atualizada!':'🏆 Conquista registrada!');
+        });
+    }
+
+    function delAch(id){
+        showConfirm('Excluir esta conquista?',function(){
+            api('/api/achievements/'+id,{method:'DELETE'}).then(function(){
+                renderConquistas();
+                toast('🗑️ Conquista excluída');
+            });
+        });
+    }
+
     // ─── Refresh ───
     function refreshAll(){
-        loadChannels().then(function(){renderFluxo();renderCanais();renderConteudos();renderPrompts();loadStats()});
+        loadChannels().then(function(){renderFluxo();renderCanais();renderConteudos();renderPrompts();renderConquistas();loadStats()});
     }
 
     // ─── Event Delegation ───
@@ -613,6 +730,12 @@
         if((m=q('[data-ctf]'))){ctFilter=m.dataset.ctf;renderConteudos();return}
         if(q('#bNCt')){openCtModal();return}
         if(q('#svCt')){saveCt();return}
+        // Achievements handlers
+        if((m=q('[data-dach]'))){ev.stopPropagation();delAch(m.dataset.dach);return}
+        if((m=q('[data-each]'))){ev.stopPropagation();openAchModal(m.dataset.each);return}
+        if((m=q('[data-achimg]'))){var img=m;document.getElementById('ctLbImg').src=img.src;document.getElementById('ctLightbox').classList.add('on');return}
+        if(q('#bNAch')){openAchModal();return}
+        if(q('#svAch')){saveAch();return}
         if((m=q('[data-dpr]'))){ev.stopPropagation();delPr(m.dataset.dpr);return}
         if((m=q('[data-epr]'))){ev.stopPropagation();openPrModal(m.dataset.epr);return}
         if((m=q('[data-vpr]'))){viewPr(m.dataset.vpr);return}
