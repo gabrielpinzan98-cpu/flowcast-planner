@@ -553,6 +553,7 @@
         h+='<div class="fg"><label>Thumbnail</label><div class="thumbup"><label>📁 Escolher imagem<input type="file" id="ctThFile" accept="image/*"></label></div><div id="ctThPrev"></div></div>';
         h+='<div class="fg"><label>Status</label><select id="ctS" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px"><option value="pendente"'+(st==='pendente'?' selected':'')+'>📝 Pendente</option><option value="publicado"'+(st==='publicado'?' selected':'')+'>✅ Publicado</option></select></div>';
         h+='<div class="fg"><label>Data de Publicação</label><input id="ctD" type="date" value="'+(editDate||'')+'" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px"></div>';
+        h+='<div class="fg"><label>Observação</label><textarea id="ctNotes" rows="3" placeholder="Anotações, links de referência, ideias..." style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t1);font-family:var(--f);font-size:14px;resize:vertical"></textarea></div>';
         h+='<div class="mf"><button type="button" class="btn bs" data-close="mCt">Cancelar</button><button type="button" class="btn bp" id="svCt">Salvar</button></div>';
         document.getElementById('mCtB').innerHTML=h;
         document.getElementById('mCtB').dataset.eid=editId||'';
@@ -569,12 +570,17 @@
             };
             reader.readAsDataURL(file);
         };
-        // Show existing thumbnail if editing
-        if(editId&&hasThumb){
-            document.getElementById('ctThPrev').innerHTML='<div class="thumbprev"><img src="" id="ctThExist"><button type="button" class="thumbrm" onclick="ctThumbData=\'remove\';this.parentElement.remove()">✕</button></div>';
-            // Load existing thumbnail
+        // Load existing data if editing
+        if(editId){
             api('/api/contents/'+editId+'/detail').then(function(ct){
-                if(ct&&ct.thumbnail){var img=document.getElementById('ctThExist');if(img)img.src=ct.thumbnail}
+                if(ct){
+                    if(ct.thumbnail){
+                        document.getElementById('ctThPrev').innerHTML='<div class="thumbprev"><img src="'+ct.thumbnail+'"><button type="button" class="thumbrm" onclick="ctThumbData=\'remove\';this.parentElement.remove()">✕</button></div>';
+                    }
+                    if(ct.notes){
+                        document.getElementById('ctNotes').value=ct.notes;
+                    }
+                }
             }).catch(function(){});
         }
         setTimeout(function(){document.getElementById('ctN').focus()},100);
@@ -586,7 +592,8 @@
         if(!nm)return;
         var st=document.getElementById('ctS').value;
         var dt=document.getElementById('ctD').value||null;
-        var body={channel_id:curCtCh,title:nm,status:st,published_at:dt};
+        var notes=document.getElementById('ctNotes').value.trim()||null;
+        var body={channel_id:curCtCh,title:nm,status:st,published_at:dt,notes:notes};
         if(ctThumbData==='remove'){body.thumbnail=null}
         else if(ctThumbData){body.thumbnail=ctThumbData}
         var url=eid?'/api/contents/'+eid:'/api/contents';
