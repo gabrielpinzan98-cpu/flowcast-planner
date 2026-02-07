@@ -109,8 +109,13 @@ def init_db():
             id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
             title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pendente',
-            published_at TEXT, thumbnail TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            published_at TEXT, thumbnail TEXT, notes TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )""")
+    # Add notes column if table already exists without it
+    try:
+        cur.execute("ALTER TABLE contents ADD COLUMN IF NOT EXISTS notes TEXT")
+    except Exception:
+        pass
     cur.execute("""
         CREATE TABLE IF NOT EXISTS achievements (
             id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -420,8 +425,9 @@ def api_create_content():
     uid = current_user_id()
     data = request.json; ct_id = new_id()
     thumb = data.get("thumbnail") or None
-    db_execute("INSERT INTO contents (id, user_id, channel_id, title, status, published_at, thumbnail) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (ct_id, uid, data["channel_id"], data["title"], data.get("status","pendente"), data.get("published_at") or None, thumb))
+    notes = data.get("notes") or None
+    db_execute("INSERT INTO contents (id, user_id, channel_id, title, status, published_at, thumbnail, notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+        (ct_id, uid, data["channel_id"], data["title"], data.get("status","pendente"), data.get("published_at") or None, thumb, notes))
     db_commit(); return jsonify({"id": ct_id, "ok": True})
 
 @app.route("/api/contents/<ct_id>", methods=["PUT"])
@@ -429,11 +435,11 @@ def api_create_content():
 def api_update_content(ct_id):
     uid = current_user_id(); data = request.json
     if "thumbnail" in data:
-        db_execute("UPDATE contents SET title=%s, status=%s, published_at=%s, thumbnail=%s WHERE id=%s AND user_id=%s",
-            (data["title"], data.get("status","pendente"), data.get("published_at") or None, data.get("thumbnail") or None, ct_id, uid))
+        db_execute("UPDATE contents SET title=%s, status=%s, published_at=%s, thumbnail=%s, notes=%s WHERE id=%s AND user_id=%s",
+            (data["title"], data.get("status","pendente"), data.get("published_at") or None, data.get("thumbnail") or None, data.get("notes") or None, ct_id, uid))
     else:
-        db_execute("UPDATE contents SET title=%s, status=%s, published_at=%s WHERE id=%s AND user_id=%s",
-            (data["title"], data.get("status","pendente"), data.get("published_at") or None, ct_id, uid))
+        db_execute("UPDATE contents SET title=%s, status=%s, published_at=%s, notes=%s WHERE id=%s AND user_id=%s",
+            (data["title"], data.get("status","pendente"), data.get("published_at") or None, data.get("notes") or None, ct_id, uid))
     db_commit(); return jsonify({"ok": True})
 
 @app.route("/api/contents/<ct_id>/thumbnail", methods=["POST"])
